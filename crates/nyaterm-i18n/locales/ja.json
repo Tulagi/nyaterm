@@ -3515,6 +3515,7 @@
       "openNewSessionMenu": "新規セッションメニューを開く",
       "togglePaneFocus": "現在のペインに集中",
       "toggleNativeFullscreen": "フルスクリーン",
+      "toggleImmersiveFullscreen": "没入型フルスクリーン",
       "nextTab": "次のタブ",
       "nextTerminalGroup": "次のターミナルグループ",
       "previousTerminalGroup": "前のターミナルグループ",

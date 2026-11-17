@@ -3515,6 +3515,7 @@
       "openNewSessionMenu": "打开新建会话菜单",
       "togglePaneFocus": "聚焦当前分屏",
       "toggleNativeFullscreen": "原生全屏",
+      "toggleImmersiveFullscreen": "沉浸全屏",
       "nextTab": "下一个标签",
       "nextTerminalGroup": "下一个终端区域",
       "previousTerminalGroup": "上一个终端区域",

@@ -10,7 +10,7 @@ use crate::shortcuts::{
     ShowAllCommands, ShowCommandSuggestions, SwitchToTab, TemporarySshLink, TerminalClear,
     TerminalClearAll, TerminalCommandNext, TerminalCommandPrevious, TerminalCommandSelect,
     TerminalCopy, TerminalFind, TerminalPaste, TerminalPasteSelected, TerminalSelectAll,
-    ToggleLeftSidebar, ToggleNativeFullscreen, TogglePaneFocus, ToggleRecording,
+    ToggleImmersiveFullscreen, ToggleLeftSidebar, ToggleNativeFullscreen, TogglePaneFocus, ToggleRecording,
     ToggleRightSidebar, ZoomIn, ZoomOut,
 };
 
@@ -124,6 +124,17 @@ impl NyaTermApp {
             return false;
         }
         use crate::features::layout::title_bar::definition::TitleMenuCommand;
+        if matches!(
+            invocation.id,
+            ShortcutId::NewSession
+                | ShortcutId::ManageSyncGroups
+                | ShortcutId::ToggleLeftSidebar
+                | ShortcutId::ToggleRightSidebar
+                | ShortcutId::OpenChat
+                | ShortcutId::ShowAllCommands
+        ) {
+            self.exit_immersive_fullscreen(window, cx);
+        }
         match invocation.id {
             ShortcutId::TerminalCopy => {
                 self.execute_title_menu_command(&TitleMenuCommand::TerminalCopy, window, cx)
@@ -224,7 +235,8 @@ impl NyaTermApp {
                 self.execute_title_menu_command(&TitleMenuCommand::ToggleRightSidebar, window, cx)
             }
             ShortcutId::TogglePaneFocus => {
-                if self.session.active_id().is_some()
+                if !self.shell.immersive_fullscreen()
+                    && self.session.active_id().is_some()
                     && !self.active_workspace_tab().is_some_and(|key| {
                         !crate::models::WorkspaceTabId::from_layout_key(&key).is_session()
                     })
@@ -236,8 +248,10 @@ impl NyaTermApp {
                 }
             }
             ShortcutId::ToggleNativeFullscreen => {
-                window.toggle_fullscreen();
-                cx.notify();
+                self.toggle_native_fullscreen(window, cx);
+            }
+            ShortcutId::ToggleImmersiveFullscreen => {
+                self.toggle_immersive_fullscreen(window, cx);
             }
             ShortcutId::ZoomIn => {
                 self.execute_title_menu_command(&TitleMenuCommand::ZoomIn, window, cx)
@@ -357,6 +371,7 @@ impl NyaTermApp {
             .on_action(direct_handler!(ToggleLeftSidebar, ToggleLeftSidebar))
             .on_action(direct_handler!(ToggleRightSidebar, ToggleRightSidebar))
             .on_action(direct_handler!(TogglePaneFocus, TogglePaneFocus))
+            .on_action(direct_handler!(ToggleImmersiveFullscreen, ToggleImmersiveFullscreen))
             .on_action(direct_handler!(
                 ToggleNativeFullscreen,
                 ToggleNativeFullscreen

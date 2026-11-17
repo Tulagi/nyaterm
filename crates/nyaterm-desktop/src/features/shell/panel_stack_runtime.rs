@@ -53,6 +53,9 @@ fn side_panel_stack_render_mode(overlay: Option<NavItem>) -> SidePanelStackRende
 
 impl NyaTermApp {
     pub(in crate::features) fn transfer_browser_is_visible(&self) -> bool {
+        if self.shell.immersive_fullscreen() {
+            return false;
+        }
         [PanelSide::Left, PanelSide::Right].into_iter().any(|side| {
             if self.shell.panel_is_floating() {
                 return self.shell.panels.floating_panel(side) == Some(NavItem::Transfers);
@@ -220,6 +223,9 @@ impl NyaTermApp {
         &mut self,
         cx: &mut Context<Self>,
     ) -> bool {
+        if self.shell.immersive_fullscreen() {
+            return false;
+        }
         let Some(side) = self.shell.panels.last_floating_side else {
             return false;
         };
@@ -233,7 +239,7 @@ impl NyaTermApp {
     /// (`top_0/left(px(40.))` inside the surface that starts below the 40px
     /// title bar), so the input path never reads layout.
     fn floating_panel_window_bounds(&self, side: PanelSide) -> Option<Bounds<Pixels>> {
-        if !self.shell.panel_is_floating() {
+        if self.shell.immersive_fullscreen() || !self.shell.panel_is_floating() {
             return None;
         }
         self.shell.panels.floating_panel(side)?;

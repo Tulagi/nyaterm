@@ -65,6 +65,14 @@ Each group displays its selected session. Clicking a terminal or tab chooses the
 
 Drag a divider to resize groups, or double-click it to restore equal sizes. Shrinking the window preserves the layout. Focus mode temporarily displays only the current session; leaving it restores the layout.
 
+## Immersive fullscreen
+
+Press `Ctrl+F11` on Windows or Linux, or `Ctrl+Cmd+F11` on macOS, to enter **Immersive Fullscreen**. The window fills the screen and hides the Windows taskbar. The title and menu bar, both activity bars and side panels, floating side panels, and bottom helper panels are temporarily hidden. Session tabs and existing split panes remain available for switching sessions, resizing panes, and working in the terminal.
+
+Press the same shortcut again to restore the previous window state and panel layout. If the window was already in native fullscreen, leaving immersive mode keeps native fullscreen active. The native fullscreen shortcut (`F11` on Windows / Linux or `Ctrl+Cmd+F` on macOS) restores the app bars and exits to windowed mode when used during immersive fullscreen.
+
+`Esc` does not exit immersive mode, so terminal programs such as Vim and less can still receive it during normal terminal input. Open menus and dialogs keep their own Escape behavior. Immersive fullscreen keeps sessions connected and does not overwrite saved sidebar widths or visibility settings. It is separate from **Focus Pane**, which displays only the current session. Change its shortcut in **Settings → Keybindings → View**.
+
 ## Layout restoration and workspace padding
 
 NyaTerm saves the tab group layout and restores tabs, splits, and active positions when the workspace is reopened. Older splits inside a tab convert to independent tab groups, preserving their directions, proportions, names, colors, and locks.

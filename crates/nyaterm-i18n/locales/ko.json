@@ -3515,6 +3515,7 @@
       "openNewSessionMenu": "새 세션 메뉴 열기",
       "togglePaneFocus": "현재 창에 집중",
       "toggleNativeFullscreen": "전체 화면",
+      "toggleImmersiveFullscreen": "몰입형 전체 화면",
       "nextTab": "다음 탭",
       "nextTerminalGroup": "다음 터미널 그룹",
       "previousTerminalGroup": "이전 터미널 그룹",

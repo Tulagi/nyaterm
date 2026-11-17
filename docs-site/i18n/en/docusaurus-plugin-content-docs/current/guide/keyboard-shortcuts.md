@@ -53,6 +53,9 @@ The terminal itself also accepts `Ctrl / Cmd + V` and context-menu paste.
 |----------|--------|
 | `Ctrl / Cmd + Shift + E` | Toggle the left sidebar |
 | `Ctrl / Cmd + Shift + B` | Toggle the right sidebar |
+| `Ctrl / Cmd + Shift + Enter` | Focus the current pane |
+| Windows / Linux: `F11`; macOS: `Ctrl + Cmd + F` | Native fullscreen |
+| Windows / Linux: `Ctrl + F11`; macOS: `Ctrl + Cmd + F11` | Immersive fullscreen |
 | `Ctrl / Cmd + =` | Zoom in |
 | `Ctrl / Cmd + -` | Zoom out |
 | `Ctrl / Cmd + 0` | Reset zoom |
@@ -63,6 +66,8 @@ The terminal itself also accepts `Ctrl / Cmd + V` and context-menu paste.
 `Ctrl / Cmd + Shift + P` is labeled **Show/Hide Quick Commands Panel** in settings. Opening it focuses the search field; pressing the shortcut again hides the panel and returns focus to the workspace. Reopening preserves filters and panel height. The welcome screen’s **Open Quick Commands** action only opens the panel.
 
 `Ctrl / Cmd + Shift + S` opens the Command Palette overlay to search workspace tabs, connecting sessions, and saved connections.
+
+**Immersive Fullscreen** enters native fullscreen and hides the title and menu bar, both activity bars and side panels, and bottom helper panels, while keeping session tabs and split panes visible. Press the same shortcut again to restore the previous window and panel layout. The native fullscreen shortcut exits immersive fullscreen to windowed mode. `Esc` does not exit immersive fullscreen and remains available to terminal programs during normal terminal input. See [Layout & Workspace](./layout-and-workspace#immersive-fullscreen).
 
 ## File explorer
 
@@ -86,7 +91,7 @@ This shortcut applies only while the file explorer has focus.
 
 ## Customizing shortcuts
 
-**Settings → Keybindings** lists all 32 shortcuts grouped by the six categories above, and all of them can be changed:
+**Settings → Keybindings** lists all configurable shortcuts grouped by the six categories above, and all of them can be changed:
 
 - Click a shortcut to start recording, press the new combination, then press Enter or **Save**
 - If the combination is already taken, the conflicting entry is named and nothing is overwritten

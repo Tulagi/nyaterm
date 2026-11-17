@@ -49,6 +49,7 @@ pub(crate) enum ShortcutId {
     ToggleRightSidebar,
     TogglePaneFocus,
     ToggleNativeFullscreen,
+    ToggleImmersiveFullscreen,
     ZoomIn,
     ZoomOut,
     ResetZoom,
@@ -95,6 +96,7 @@ impl ShortcutId {
             Self::ToggleRightSidebar => "view.toggleRightSidebar",
             Self::TogglePaneFocus => "view.togglePaneFocus",
             Self::ToggleNativeFullscreen => "view.toggleNativeFullscreen",
+            Self::ToggleImmersiveFullscreen => "view.toggleImmersiveFullscreen",
             Self::ZoomIn => "view.zoomIn",
             Self::ZoomOut => "view.zoomOut",
             Self::ResetZoom => "view.resetZoom",
@@ -379,7 +381,7 @@ macro_rules! shortcut {
     };
 }
 
-pub(crate) const SHORTCUT_REGISTRY: [ShortcutDefinition; 41] = [
+pub(crate) const SHORTCUT_REGISTRY: [ShortcutDefinition; 42] = [
     shortcut!(
         TerminalCopy,
         Terminal,
@@ -731,6 +733,17 @@ pub(crate) const SHORTCUT_REGISTRY: [ShortcutDefinition; 41] = [
         "ctrl+meta+f",
         Supported,
         "Toggles native fullscreen."
+    ),
+    shortcut!(
+        ToggleImmersiveFullscreen,
+        View,
+        "settings.shortcutLabels.toggleImmersiveFullscreen",
+        Workspace,
+        ShortcutKind::Direct,
+        "ctrl+f11",
+        "ctrl+meta+f11",
+        Supported,
+        "Toggles fullscreen with tabs and terminal panes visible and surrounding panels hidden."
     ),
     shortcut!(
         ZoomIn,
@@ -1169,6 +1182,7 @@ fn binding_for_action(
         ShortcutId::ToggleRightSidebar => binding!(ToggleRightSidebar),
         ShortcutId::TogglePaneFocus => binding!(TogglePaneFocus),
         ShortcutId::ToggleNativeFullscreen => binding!(ToggleNativeFullscreen),
+        ShortcutId::ToggleImmersiveFullscreen => binding!(ToggleImmersiveFullscreen),
         ShortcutId::ZoomIn => binding!(ZoomIn),
         ShortcutId::ZoomOut => binding!(ZoomOut),
         ShortcutId::ResetZoom => binding!(ResetZoom),
@@ -1440,8 +1454,8 @@ mod tests {
         FILE_EXPLORER_KEY_CONTEXT, MODAL_KEY_CONTEXT, OpenSettings, RenameFile, ResolvedKeymap,
         SCREEN_LOCKED_KEY_CONTEXT, SHORTCUT_REGISTRY, ShortcutBinding, ShortcutDiagnosticKind,
         ShortcutId, ShortcutInvocation, ShortcutPlatform, ShortcutScope, SwitchToTab, TerminalCopy,
-        TerminalPaste, WORKSPACE_KEY_CONTEXT, gpui_bindings, is_default_binding,
-        reset_known_overrides, resolve_invocation,
+        TerminalPaste, ToggleImmersiveFullscreen, ToggleNativeFullscreen, WORKSPACE_KEY_CONTEXT,
+        gpui_bindings, is_default_binding, reset_known_overrides, resolve_invocation,
     };
     #[cfg(not(target_os = "macos"))]
     use super::{conflicting_shortcut, shortcut_keys_for};
@@ -1449,7 +1463,7 @@ mod tests {
 
     #[test]
     fn registry_is_complete_unique_and_has_valid_platform_defaults() {
-        assert_eq!(SHORTCUT_REGISTRY.len(), 41);
+        assert_eq!(SHORTCUT_REGISTRY.len(), 42);
         let mut ids = HashSet::new();
         for definition in SHORTCUT_REGISTRY {
             assert!(ids.insert(definition.id));
@@ -1509,11 +1523,13 @@ mod tests {
             }
             let mac = definition.default_binding_for(ShortcutPlatform::MacOs);
             assert!(
-                definition.id == ShortcutId::ToggleNativeFullscreen
-                    || mac
-                        .chords()
-                        .iter()
-                        .all(|chord| !chord.keystroke().modifiers.control),
+                matches!(
+                    definition.id,
+                    ShortcutId::ToggleNativeFullscreen | ShortcutId::ToggleImmersiveFullscreen
+                ) || mac
+                    .chords()
+                    .iter()
+                    .all(|chord| !chord.keystroke().modifiers.control),
                 "{}",
                 definition.id.as_str()
             );
@@ -1541,6 +1557,124 @@ mod tests {
                 .default_binding_for(ShortcutPlatform::MacOs)
                 .canonical(),
             "meta+w,meta+shift+w"
+        );
+    }
+
+    #[test]
+    fn immersive_fullscreen_has_distinct_platform_defaults() {
+        let definition = SHORTCUT_REGISTRY
+            .iter()
+            .find(|item| item.id == ShortcutId::ToggleImmersiveFullscreen)
+            .unwrap();
+        for (platform, expected) in [
+            (ShortcutPlatform::Windows, "ctrl+f11"),
+            (ShortcutPlatform::Linux, "ctrl+f11"),
+            (ShortcutPlatform::MacOs, "ctrl+meta+f11"),
+        ] {
+            let binding = definition.default_binding_for(platform);
+            assert_eq!(binding.canonical(), expected);
+            for other in SHORTCUT_REGISTRY {
+                if other.id == definition.id || !definition.scope.overlaps(other.scope) {
+                    continue;
+                }
+                assert!(
+                    other
+                        .default_binding_for(platform)
+                        .chords()
+                        .iter()
+                        .all(|chord| !binding.contains(chord)),
+                    "immersive fullscreen conflicts with {:?} on {platform:?}",
+                    other.id
+                );
+            }
+        }
+    }
+
+    #[gpui::test]
+    fn fullscreen_shortcuts_dispatch_independently_and_do_not_claim_escape(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let resolved = ResolvedKeymap::resolve(&HashMap::new());
+        let keymap = Keymap::new(cx.update(|cx| gpui_bindings(&resolved, cx)));
+        let terminal_contexts = [
+            KeyContext::parse(WORKSPACE_KEY_CONTEXT).unwrap(),
+            KeyContext::parse("Terminal").unwrap(),
+        ];
+        for (id, action) in [
+            (
+                ShortcutId::ToggleNativeFullscreen,
+                &ToggleNativeFullscreen as &dyn gpui::Action,
+            ),
+            (
+                ShortcutId::ToggleImmersiveFullscreen,
+                &ToggleImmersiveFullscreen as &dyn gpui::Action,
+            ),
+        ] {
+            let binding = SHORTCUT_REGISTRY
+                .iter()
+                .find(|item| item.id == id)
+                .unwrap()
+                .default_binding();
+            let keystroke = binding.chords()[0].keystroke();
+            let (actions, pending) =
+                keymap.bindings_for_input(std::slice::from_ref(keystroke), &terminal_contexts);
+            assert!(!pending);
+            assert_eq!(actions.len(), 1);
+            assert!(actions[0].action().partial_eq(action));
+            assert_eq!(
+                resolve_invocation(&resolved, keystroke, &terminal_contexts),
+                Some(ShortcutInvocation {
+                    id,
+                    tab_index: None,
+                })
+            );
+        }
+        let escape = gpui::Keystroke::parse("escape").unwrap();
+        assert_eq!(
+            resolve_invocation(&resolved, &escape, &terminal_contexts),
+            None
+        );
+    }
+
+    #[test]
+    fn immersive_fullscreen_override_replaces_default_and_resets() {
+        let id = ShortcutId::ToggleImmersiveFullscreen;
+        let mut overrides = HashMap::from([(
+            "view.toggleImmersiveFullscreen".to_string(),
+            "ctrl+alt+f11".to_string(),
+        )]);
+        let contexts = [KeyContext::parse(WORKSPACE_KEY_CONTEXT).unwrap()];
+        let custom = ShortcutBinding::parse("ctrl+alt+f11").unwrap();
+        let default = SHORTCUT_REGISTRY
+            .iter()
+            .find(|item| item.id == id)
+            .unwrap()
+            .default_binding();
+        let resolved = ResolvedKeymap::resolve(&overrides);
+        assert_eq!(resolved.diagnostic(id), None);
+        assert_eq!(
+            resolve_invocation(&resolved, custom.chords()[0].keystroke(), &contexts),
+            Some(ShortcutInvocation {
+                id,
+                tab_index: None,
+            })
+        );
+        assert_eq!(
+            resolve_invocation(&resolved, default.chords()[0].keystroke(), &contexts),
+            None
+        );
+        reset_known_overrides(&mut overrides);
+        assert!(overrides.is_empty());
+        assert_eq!(
+            resolve_invocation(
+                &ResolvedKeymap::resolve(&overrides),
+                default.chords()[0].keystroke(),
+                &contexts,
+            ),
+            Some(ShortcutInvocation {
+                id,
+                tab_index: None,
+            })
         );
     }
 

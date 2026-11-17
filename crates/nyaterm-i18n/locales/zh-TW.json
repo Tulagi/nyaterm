@@ -3515,6 +3515,7 @@
       "openNewSessionMenu": "開啟新增工作階段選單",
       "togglePaneFocus": "聚焦目前窗格",
       "toggleNativeFullscreen": "原生全螢幕",
+      "toggleImmersiveFullscreen": "沉浸式全螢幕",
       "nextTab": "下一個標籤",
       "nextTerminalGroup": "下一個終端區域",
       "previousTerminalGroup": "上一個終端區域",

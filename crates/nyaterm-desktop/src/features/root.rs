@@ -292,6 +292,7 @@ impl NyaTermApp {
         self.ensure_visible_notes_loaded(cx);
         self.refresh_window_render_inputs(window, cx);
         cx.observe_window_bounds(window, |this, window, cx| {
+            this.reconcile_immersive_fullscreen(window, cx);
             let browser_was_visible = this.transfer_browser_is_visible();
             this.refresh_window_render_inputs(window, cx);
             this.constrain_session_info_to_viewport();
@@ -543,7 +544,9 @@ impl NyaTermApp {
                     .flex()
                     .flex_col()
                     .size_full()
-                    .child(self.title_bar(window, cx))
+                    .when(!self.shell.immersive_fullscreen(), |this| {
+                        this.child(self.title_bar(window, cx))
+                    })
                     .child(self.workspace_surface(palette, window, cx)),
             );
         self.with_shortcut_action_handlers(root, cx)
@@ -555,6 +558,9 @@ impl NyaTermApp {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        if self.shell.immersive_fullscreen() {
+            return self.main_surface(cx).into_any_element();
+        }
         let started_at = Instant::now();
         let output = {
             let compact_layout = !cfg!(target_os = "macos");

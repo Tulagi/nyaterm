@@ -102,8 +102,10 @@ impl NyaTermApp {
                     .child(measurement)
                     .child(self.workspace_terminal_area(cx)),
             )
-            .child(self.bottom_panel_resize_handle(cx))
-            .child(self.bottom_panel_view(cx))
+            .when(!self.shell.immersive_fullscreen(), |this| {
+                this.child(self.bottom_panel_resize_handle(cx))
+                    .child(self.bottom_panel_view(cx))
+            })
     }
 
     fn workspace_terminal_area(&mut self, cx: &mut Context<Self>) -> gpui::AnyElement {

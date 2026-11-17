@@ -3515,6 +3515,7 @@
       "openNewSessionMenu": "Open New Session Menu",
       "togglePaneFocus": "Focus Pane",
       "toggleNativeFullscreen": "Fullscreen",
+      "toggleImmersiveFullscreen": "Immersive Fullscreen",
       "nextTab": "Next Tab",
       "nextTerminalGroup": "Next Terminal Group",
       "previousTerminalGroup": "Previous Terminal Group",

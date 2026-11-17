@@ -7,6 +7,8 @@ mod drop_hover;
 mod event_pump;
 mod global_shortcut_runtime;
 mod idle_lock;
+mod immersive_fullscreen;
+mod immersive_fullscreen_runtime;
 mod keybinding_runtime;
 mod main_window;
 mod navigation_runtime;

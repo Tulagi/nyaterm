@@ -3515,6 +3515,7 @@
       "openNewSessionMenu": "Ouvrir le menu de nouvelle session",
       "togglePaneFocus": "Agrandir le volet actif",
       "toggleNativeFullscreen": "Plein écran",
+      "toggleImmersiveFullscreen": "Plein écran immersif",
       "nextTab": "Onglet suivant",
       "nextTerminalGroup": "Groupe de terminaux suivant",
       "previousTerminalGroup": "Groupe de terminaux précédent",

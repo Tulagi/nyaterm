@@ -1,0 +1,170 @@
+name: Windows x64 portable (immersive fullscreen)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/immersive-fullscreen
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-x64-portable-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  TARGET: x86_64-pc-windows-msvc
+  NYATERM_GITHUB_GIST_CLIENT_ID: ${{ vars.NYATERM_GITHUB_GIST_CLIENT_ID }}
+
+jobs:
+  checks:
+    name: Check formatting and fullscreen transitions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: rustfmt
+      - name: Check Rust formatting
+        run: |
+          cargo fmt --all
+          git diff --binary > "$RUNNER_TEMP/rustfmt.patch"
+          git diff --exit-code
+      - name: Test fullscreen state transitions
+        run: |
+          cp crates/nyaterm-desktop/src/features/shell/immersive_fullscreen.rs "$RUNNER_TEMP/immersive_fullscreen.rs"
+          echo 'mod immersive_fullscreen;' > "$RUNNER_TEMP/immersive_tests.rs"
+          rustc --edition=2024 --test "$RUNNER_TEMP/immersive_tests.rs" -o "$RUNNER_TEMP/immersive_tests"
+          "$RUNNER_TEMP/immersive_tests"
+      - name: Test packaging and archive verification
+        run: python -m unittest scripts.tests.test_package_native scripts.tests.test_verify_native_package
+      - name: Upload formatting corrections
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustfmt-corrections
+          path: ${{ runner.temp }}/rustfmt.patch
+          if-no-files-found: ignore
+          retention-days: 7
+  portable:
+    name: Build and verify Windows x64 portable
+    needs: checks
+    runs-on: windows-2025
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set package identity
+        run: |
+          @'
+          import os, tomllib
+          with open('Cargo.toml', 'rb') as source:
+              version = tomllib.load(source)['workspace']['package']['version']
+          label = version.split('+')[0].split('-')[0] + '-immersive.' + os.environ['GITHUB_SHA'][:12]
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              output.write(f'NYATERM_VERSION={version}\nNYATERM_ARTIFACT_VERSION={label}\n')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Set up Rust and Windows ATL
+        uses: ./.github/actions/setup-rust
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt
+          cache-key: immersive-windows-x64
+          cache-on-failure: 'true'
+          save-cache: always
+      - name: Check Rust formatting
+        run: cargo fmt --all -- --check
+      - name: Test Windows packaging scripts
+        run: python -m unittest scripts.tests.test_package_native scripts.tests.test_verify_native_package -k windows -k helper -k conpty
+      - name: Install LLVM for Android native dependencies
+        run: choco install llvm -y --no-progress
+      - name: Set up MSYS2 for Android native dependencies
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          path-type: inherit
+          install: make
+      # Reuse the upstream packaging and verification contracts. Its prerelease
+      # label skips MSI; the accompanying NSIS installer is not uploaded.
+      - name: Install NSIS on runner
+        run: ./scripts/ci/install-nsis.ps1
+      - name: Prepare bundled ConPTY
+        run: python scripts/release/prepare_conpty.py
+      - name: Prepare Android native dependencies
+        shell: msys2 {0}
+        run: python scripts/release/prepare_android.py --target "$TARGET"
+      - name: Build and package application
+        run: |
+          $linker = (Get-Command link.exe -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
+          if ($linker -notmatch '\\VC\\Tools\\MSVC\\[^\\]+\\bin\\HostX64\\x64\\link\.exe$') {
+            throw "Expected MSVC linker, got: $linker"
+          }
+          python scripts/release/package_native.py "$env:TARGET"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test fullscreen state and shortcut routing
+        run: |
+          $env:CARGO_ENCODED_RUSTFLAGS = "-C$([char]31)target-feature=+crt-static"
+          $env:FFMPEG_DIR = (Resolve-Path "target/android-deps/ffmpeg/$env:TARGET").Path
+          cargo test --release --locked --target "$env:TARGET" -p nyaterm-desktop --lib fullscreen
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify packaged binaries and resources
+        run: |
+          python scripts/release/verify_native_package.py --target "$env:TARGET" --version "$env:NYATERM_VERSION" --artifact-version "$env:NYATERM_ARTIFACT_VERSION" --dist dist
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test portable updater against packaged ZIP
+        run: |
+          $env:CARGO_ENCODED_RUSTFLAGS = "-C$([char]31)target-feature=+crt-static"
+          $env:NYATERM_TEST_PORTABLE_ARCH = 'x86_64'
+          $env:NYATERM_TEST_PORTABLE_ARCHIVE = (Resolve-Path "dist/NyaTerm_$($env:NYATERM_ARTIFACT_VERSION)_windows_x64_portable.zip").Path
+          cargo test --release --locked --target "$env:TARGET" -p nyaterm-updater --lib portable_release_archive_round_trip -- --ignored
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record source and SHA-256
+        run: |
+          $archive = Get-Item "dist/NyaTerm_$($env:NYATERM_ARTIFACT_VERSION)_windows_x64_portable.zip"
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive.FullName).Hash.ToLowerInvariant()
+          "$hash  $($archive.Name)" | Set-Content -Encoding utf8 "dist/SHA256SUMS.txt"
+          @"
+          Repository: $env:GITHUB_REPOSITORY
+          Commit: $env:GITHUB_SHA
+          Run: https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID
+          Shortcut: Ctrl+F11
+          "@ | Set-Content -Encoding utf8 "dist/BUILD-INFO.txt"
+          "Built and verified $($archive.Name) from $env:GITHUB_SHA. Download the windows_x64_portable artifact below." | Add-Content $env:GITHUB_STEP_SUMMARY
+      - name: Upload Windows x64 portable
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_x64_portable
+          path: |
+            dist/*_windows_x64_portable.zip
+            dist/SHA256SUMS.txt
+            dist/BUILD-INFO.txt
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload failed FFmpeg configuration log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-config-windows-x64
+          path: target/android-deps/ffmpeg-build/**/ffbuild/config.log
+          if-no-files-found: ignore
+          retention-days: 7

@@ -13,6 +13,7 @@ use gpui::{AnyView, Entity, Pixels, Point, RenderImage, ScrollHandle, SharedStri
 use nyaterm_ui::{NyaAppMenuBar, NyaWindowHandle};
 
 use super::super::app_state::SettingsDraftSnapshot;
+use super::immersive_fullscreen::ImmersiveFullscreenState;
 use super::runtime_state::ShellRuntimeState;
 use crate::models::{
     ActivityBarContextMenuState, ActivityBarLayoutState, BottomPanelMode, BottomPanelResizeState,
@@ -234,6 +235,7 @@ pub(in crate::features) struct ShellWorkspaceState {
         std::collections::HashMap<String, super::editor_tabs::EditorCloseApproval>,
     pub(in crate::features) editor_close: Option<super::editor_tabs::PendingWorkspaceClose>,
     pub(super) pane_focus_mode: bool,
+    immersive_fullscreen: ImmersiveFullscreenState,
     pub(super) split: Option<WorkspaceSplitState>,
     pub(super) split_resize: Option<WorkspaceSplitResizeState>,
     pub(super) pane_roots: HashMap<String, WorkspacePaneNode>,
@@ -280,7 +282,23 @@ impl ShellFeatureState {
     }
 
     pub(in crate::features) fn pane_focus_mode(&self) -> bool {
-        self.workspace.pane_focus_mode
+        self.workspace.pane_focus_mode && !self.immersive_fullscreen()
+    }
+
+    pub(in crate::features) fn immersive_fullscreen(&self) -> bool {
+        self.workspace.immersive_fullscreen.is_active()
+    }
+
+    pub(super) fn toggle_immersive_fullscreen(&mut self, fullscreen: bool) -> bool {
+        self.workspace.immersive_fullscreen.toggle(fullscreen)
+    }
+
+    pub(super) fn leave_immersive_fullscreen(&mut self) -> Option<bool> {
+        self.workspace.immersive_fullscreen.leave()
+    }
+
+    pub(super) fn observe_immersive_fullscreen(&mut self, fullscreen: bool) -> bool {
+        self.workspace.immersive_fullscreen.observe_fullscreen(fullscreen)
     }
 
     pub(in crate::features) fn set_pane_focus_mode(&mut self, enabled: bool) {
@@ -362,6 +380,7 @@ impl ShellFeatureState {
                 editor_close: None,
                 editor_exit_approvals: Default::default(),
                 pane_focus_mode: false,
+                immersive_fullscreen: ImmersiveFullscreenState::default(),
                 split: None,
                 split_resize: None,
                 pane_roots: HashMap::new(),
