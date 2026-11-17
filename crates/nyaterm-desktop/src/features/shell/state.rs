@@ -298,7 +298,9 @@ impl ShellFeatureState {
     }
 
     pub(super) fn observe_immersive_fullscreen(&mut self, fullscreen: bool) -> bool {
-        self.workspace.immersive_fullscreen.observe_fullscreen(fullscreen)
+        self.workspace
+            .immersive_fullscreen
+            .observe_fullscreen(fullscreen)
     }
 
     pub(in crate::features) fn set_pane_focus_mode(&mut self, enabled: bool) {

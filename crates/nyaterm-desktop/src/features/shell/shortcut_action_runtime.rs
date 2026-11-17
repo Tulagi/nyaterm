@@ -10,8 +10,8 @@ use crate::shortcuts::{
     ShowAllCommands, ShowCommandSuggestions, SwitchToTab, TemporarySshLink, TerminalClear,
     TerminalClearAll, TerminalCommandNext, TerminalCommandPrevious, TerminalCommandSelect,
     TerminalCopy, TerminalFind, TerminalPaste, TerminalPasteSelected, TerminalSelectAll,
-    ToggleImmersiveFullscreen, ToggleLeftSidebar, ToggleNativeFullscreen, TogglePaneFocus, ToggleRecording,
-    ToggleRightSidebar, ZoomIn, ZoomOut,
+    ToggleImmersiveFullscreen, ToggleLeftSidebar, ToggleNativeFullscreen, TogglePaneFocus,
+    ToggleRecording, ToggleRightSidebar, ZoomIn, ZoomOut,
 };
 
 fn shortcut_interceptor_dispatches(id: ShortcutId) -> bool {
@@ -371,7 +371,10 @@ impl NyaTermApp {
             .on_action(direct_handler!(ToggleLeftSidebar, ToggleLeftSidebar))
             .on_action(direct_handler!(ToggleRightSidebar, ToggleRightSidebar))
             .on_action(direct_handler!(TogglePaneFocus, TogglePaneFocus))
-            .on_action(direct_handler!(ToggleImmersiveFullscreen, ToggleImmersiveFullscreen))
+            .on_action(direct_handler!(
+                ToggleImmersiveFullscreen,
+                ToggleImmersiveFullscreen
+            ))
             .on_action(direct_handler!(
                 ToggleNativeFullscreen,
                 ToggleNativeFullscreen

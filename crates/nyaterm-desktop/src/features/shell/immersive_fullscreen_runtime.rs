@@ -9,7 +9,9 @@ impl NyaTermApp {
         cx: &mut Context<Self>,
     ) {
         let browser_was_visible = self.transfer_browser_is_visible();
-        let fullscreen = self.shell.toggle_immersive_fullscreen(window.is_fullscreen());
+        let fullscreen = self
+            .shell
+            .toggle_immersive_fullscreen(window.is_fullscreen());
         if self.shell.immersive_fullscreen() {
             self.shell.close_root_menus();
             self.shell.chrome.activity_bar_context_menu = None;
@@ -70,7 +72,10 @@ impl NyaTermApp {
         cx: &mut Context<Self>,
     ) {
         let browser_was_visible = self.transfer_browser_is_visible();
-        if self.shell.observe_immersive_fullscreen(window.is_fullscreen()) {
+        if self
+            .shell
+            .observe_immersive_fullscreen(window.is_fullscreen())
+        {
             self.immersive_fullscreen_changed(browser_was_visible, window, cx);
         }
     }
